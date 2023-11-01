@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# dependencies: (1) celestia-app v1.1.0 
-#               (2) celestia v0.11.0
+# dependencies: (1) celestia-app v1.3.0 
+#               (2) celestia v0.12.0
 
 set -x
 
@@ -121,11 +121,9 @@ echo "WARNING: Keep this auth token secret **DO NOT** log this auth token outsid
 if [ "$ENV" = "linux" ]; then
     nohup celestia bridge start \
       --node.store $NODE_PATH --gateway \
-      --core.ip 127.0.0.1 \
       --keyring.accname validator &> bridge.log &
 else
     celestia bridge start \
       --node.store $NODE_PATH --gateway \
-      --core.ip 127.0.0.1 \
       --keyring.accname validator
 fi
