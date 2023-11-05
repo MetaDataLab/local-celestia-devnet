@@ -13,12 +13,12 @@ if grep -q "init" /proc/1/cgroup; then
     echo "Running on Linux Ubuntu host"
     ENV="linux"
     APP_PATH="/data/celestia/.celestia-app"
-    NODE_PATH="/data/celestia/bridge/"
+    BRIDGE_PATH="/data/celestia/bridge/"
 else
     echo "Running in Docker container"
     ENV="docker"
     APP_PATH="/home/celestia/.celestia-app"
-    NODE_PATH="/home/celestia/bridge/"
+    BRIDGE_PATH="/home/celestia/bridge/"
 fi
 
 
@@ -34,14 +34,14 @@ else
 fi
 
 # Check if the folder exists
-if [ -d "$NODE_PATH" ]; then
+if [ -d "$BRIDGE_PATH" ]; then
   # If it exists, delete it
-  echo "The folder $NODE_PATH exists. Deleting it..."
-  rm -rf "$NODE_PATH"
+  echo "The folder $BRIDGE_PATH exists. Deleting it..."
+  rm -rf "$BRIDGE_PATH"
   echo "Folder deleted."
 else
   # If it doesn't exist, print a message
-  echo "The folder $NODE_PATH does not exist."
+  echo "The folder $BRIDGE_PATH does not exist."
 fi
 
 # Build genesis file incl account for passed address
@@ -66,9 +66,9 @@ APPD_VER_Y=$(cat /tmp/version | cut -d '.' -f 2)
 # https://gist.github.com/andre3k1/e3a1a7133fded5de5a9ee99c87c6fa0d?permalink_comment_id=3082272#gistcomment-3082272
 sed -i'.bak' 's#"tcp://127.0.0.1:26657"#"tcp://0.0.0.0:26657"#g' $APP_PATH/config/config.toml
 # celestia-appd v1.3.0 to be set
-if [ $APPD_VER_Y -gt 1 ];then
-    sed -i 's/grpc_laddr = ""/grpc_laddr = "tcp:\/\/0.0.0.0:9090"/' $APP_PATH/config/config.toml
-fi
+# if [ $APPD_VER_Y -gt 1 ];then
+#     sed -i 's/grpc_laddr = ""/grpc_laddr = "tcp:\/\/0.0.0.0:9090"/' $APP_PATH/config/config.toml
+# fi
 
 #sed -i'.bak' 's/timeout_commit = "25s"/timeout_commit = "1s"/g' $APP_PATH/config/config.toml
 #sed -i'.bak' 's/timeout_propose = "3s"/timeout_propose = "1s"/g' $APP_PATH/config/config.toml
@@ -90,14 +90,14 @@ fi
     -y
 } &
 
-mkdir -p $NODE_PATH/keys
-cp -r $APP_PATH/keyring-test/ $NODE_PATH/keys/keyring-test/
+mkdir -p $BRIDGE_PATH/keys
+cp -r $APP_PATH/keyring-test/ $BRIDGE_PATH/keys/keyring-test/
 
 # Start the celestia-app
 if [ "$ENV" = "linux" ]; then
-    nohup celestia-appd start --home $APP_PATH &> celestia-appd.log &
+    nohup celestia-appd start --home $APP_PATH --api.enable --grpc.enable --grpc-web.enable &> celestia-appd.log &
 else
-    celestia-appd start --home $APP_PATH &
+    celestia-appd start --home $APP_PATH --api.enable --grpc.enable --grpc-web.enable &
 fi
 
 # Try to get the genesis hash. Usually first request returns an empty string (port is not open, curl fails), later attempts
@@ -111,19 +111,20 @@ while [ "${#GENESIS}" -le 4 -a $CNT -ne $MAX ]; do
 	sleep 1
 done
 
-export CELESTIA_CUSTOM=private:$GENESIS
+export NETWORK="private"
+export CELESTIA_CUSTOM="${NETWORK}:${GENESIS}"
 echo $CELESTIA_CUSTOM
 
-celestia bridge init --node.store $NODE_PATH
-export CELESTIA_NODE_AUTH_TOKEN=$(celestia bridge auth admin --node.store ${NODE_PATH})
+celestia bridge init --node.store $BRIDGE_PATH
+export CELESTIA_NODE_AUTH_TOKEN=$(celestia bridge auth admin --node.store ${BRIDGE_PATH})
 echo "WARNING: Keep this auth token secret **DO NOT** log this auth token outside of development. CELESTIA_NODE_AUTH_TOKEN=$CELESTIA_NODE_AUTH_TOKEN"
 
 if [ "$ENV" = "linux" ]; then
     nohup celestia bridge start \
-      --node.store $NODE_PATH --gateway \
+      --node.store $BRIDGE_PATH --gateway \
       --keyring.accname validator &> bridge.log &
 else
     celestia bridge start \
-      --node.store $NODE_PATH --gateway \
+      --node.store $BRIDGE_PATH --gateway \
       --keyring.accname validator
 fi
