@@ -44,5 +44,5 @@ LIGHT_STORE=/data/celestia/celestia-light-testnet
 rm -rf $LIGHT_STORE
 mkdir -p $LIGHT_STORE
 
-celestia light init --node.store $LIGHT_STORE --p2p.network $NETWORK
+celestia light init --node.store $LIGHT_STORE --p2p.network $NETWORK > ./light_init.log
 nohup celestia light start --node.store $LIGHT_STORE --gateway --core.ip $bip &> ./light.log &
